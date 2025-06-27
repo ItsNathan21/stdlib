@@ -1,1 +1,0 @@
-gcc -Wall -Wextra -Wpedantic -Werror -O3 -march=native -flto -std=c11 -g src/malloc.c src/test.c -o test-malloc

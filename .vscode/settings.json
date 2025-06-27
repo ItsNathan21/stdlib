@@ -4,6 +4,8 @@
         "malloc.h": "c",
         "stdio.h": "c",
         "inttypes.h": "c",
-        "compare": "c"
+        "compare": "c",
+        "initializer_list": "c",
+        "cstdlib": "c"
     }
 }
