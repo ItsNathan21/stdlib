@@ -1,13 +1,23 @@
 import random
 import sys
+import os
 
-MIN_ARRAY_LEN = 1000
+MIN_ARRAY_LEN = 3000
 MAX_ARRAY_LEN = 20000
 
-MIN_TRACE_LEN = 1000
+MIN_TRACE_LEN = 10000
 MAX_TRACE_LEN = 100000
 
 WARMUP_LEN = 50
+
+def clearTraceDirectory():
+    for file in os.listdir("traces/"):
+        path = os.path.join("traces/", file)
+        if (os.path.isfile(path)):
+            num = file[2]
+            if (int(num) >= int(sys.argv[1])):
+                os.remove(path)
+        
 
 class Trace:
     path = None
@@ -43,6 +53,7 @@ class Trace:
 
 
 def main():
+    clearTraceDirectory()
     for i in range(int(sys.argv[1])):
         trace = Trace(i)
         trace.mallocWarmup()

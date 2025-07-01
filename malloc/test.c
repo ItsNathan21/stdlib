@@ -13,7 +13,7 @@
 #define MAX_LINELENGTH (100)
 
 typedef enum {
-    MALLOC = 'A', 
+    MALLOC = 'M', 
     FREE = 'F'
 } operation_t;
 
@@ -50,16 +50,23 @@ void run_trace(char *tracefile) {
             sscanf(LINEBUF, "%c %ld %ld", &operation, &trace_array_index, &size_to_malloc);
             trace_array[trace_array_index] = mmalloc(size_to_malloc);
             trace_array_check[trace_array_index] = 1;
+            memset(trace_array[trace_array_index], 1, size_to_malloc);
         }
         else if (LINEBUF[0] == FREE) {
             sscanf(LINEBUF, "%c %ld", &operation, &trace_array_index);
+            if (trace_array_check[trace_array_index] == 0) {
+                fprintf(stderr, "Trying to free a non-malloc'ed block\n");
+                fprintf(stderr, "Line is %s, trace_array_check[trace_array_index] = %d\n",
+                        LINEBUF, trace_array_check[trace_array_index]);
+                exit(1);
+            }
             mfree(trace_array[trace_array_index]);
             trace_array_check[trace_array_index] = 0;
         }
     }
     for (int64_t i = 0; i < trace_array_size; i++) {
-                if (trace_array_check[i]) mfree(trace_array[i]);
-            }
+            if (trace_array_check[i]) mfree(trace_array[i]);
+        }
     fclose(trace);
 }
 
@@ -81,22 +88,19 @@ int main(UNUSED int argc, UNUSED char **argv) {
 
     gettimeofday(&start, NULL);
 
-
+    printf("[ "); fflush(stdout);
     while ((curr_trace = readdir(trace_dir)) != NULL) {
         char *name = curr_trace->d_name;
         if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) continue;
-        run_trace(strcat(tracepath, name));
+
+        char full_path[512];
+        snprintf(full_path, sizeof(full_path), "%s/%s", "traces", name);
+        run_trace(full_path);
+        printf("* ");
+        fflush(stdout);
     }
 
-    // for (int j = 0; j < ITERS; j++) {
-    //     for (int i = 0; i < 3; i++) {
-    //         run_trace(traces[i]);
-    //         printf("* ");
-    //         fflush(stdout);
-    //     }
-    // }
-
-    // printf("\n");
+    printf("]\n"); fflush(stdout);
 
     closedir(trace_dir);
 

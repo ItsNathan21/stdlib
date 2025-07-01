@@ -21,7 +21,13 @@
 #define GET_PREV_ALLOC(x) ((x & PREV_ALLOC_BIT) >> PREV_ALLOC_BIT_POS)
 #define GET_SIZE(x) (x & ~(ALLOC_BIT | PREV_ALLOC_BIT))
 #define MIN_BLOCK_SIZE (32)
-#define BUCKETS (64)
+#define BUCKETS (60)
+
+
+#define MMAP_MIN (1024 * 128)
+#define MMAP (1 << 3)
+#define MMAP_POS (3)
+#define GET_MMAP(x) ((x & MMAP) >> MMAP_POS)
 
 #define UNUSED __attribute__((unused))
 
@@ -47,11 +53,12 @@ int check_heap(void);
 void print_heap(void);
 void print_free(void);
 void dbg_printf(const char *fmt, ...);
+void print_free_list(void);
 
 #ifdef DEBUG
 #define dbg_assert(cond) assert(cond)
 #else
-#define dbg_assert(cond) assert(1)
+#define dbg_assert(cond)
 #endif
 
 uint64_t round_to_multiple(uint64_t size, uint64_t multiple) {
@@ -90,9 +97,7 @@ block_t *next_block(block_t *block) {
 }
 
 uint64_t get_free_index(uint64_t size) {
-    if (size <= (1UL << 5)) return 0;
-    int index = 63 - __builtin_clzl(size);
-    return (index <= 5) ? 0 : (uint64_t)(index - 5);
+    return BUCKETS - __builtin_clzl(size);
 }
 
 void add_to_free(block_t *block) {
@@ -111,6 +116,8 @@ void add_to_free(block_t *block) {
 }
 
 void remove_from_free(block_t *block) {
+    dbg_assert(!GET_ALLOC(block->header));
+
     if (block->prev_block != NULL) 
         block->prev_block->next_block = block->next_block;
     else {   
@@ -180,7 +187,7 @@ void initialize_heap(void) {
  * block that will work, given the size
  */
 block_t *find_fit(uint64_t size) {
-    for (uint64_t idx = get_free_index(size); idx < 64; idx++) {
+    for (uint64_t idx = get_free_index(size); idx < BUCKETS; idx++) {
         for (block_t *block = free_list[idx]; block != NULL; block = block->next_block) {
             if (!GET_ALLOC(block->header) && (GET_SIZE(block->header) >= size)) {
                 return block;
@@ -200,6 +207,7 @@ void split_block(block_t *block, uint64_t size) {
     dbg_assert(size >= MIN_BLOCK_SIZE && size % (2 * sizeof(uint64_t)) == 0);
 
     remove_from_free(block);
+
     block_t *next = next_block(block);
 
     if (GET_SIZE(block->header) - size < MIN_BLOCK_SIZE) {
@@ -344,6 +352,7 @@ void dbg_printf(const char *fmt, ...) {
     fprintf(stderr, fmt, args);
     va_end(args);
 }
+
 #else
 int check_heap(void) {
     return 1;
